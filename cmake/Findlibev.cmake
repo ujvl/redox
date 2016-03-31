@@ -1,31 +1,71 @@
-# Try to find libev
-# Once done, this will define
-#
-# LIBEV_FOUND        - system has libev
-# LIBEV_INCLUDE_DIRS - libev include directories
-# LIBEV_LIBRARIES    - libraries needed to use libev
+SET(LIBEV_PATH "" CACHE PATH "Base path for include/ev.h and lib/libev*")
+SET(LIBEV_INCLUDE_PATH "" CACHE PATH "Include path for ev.h")
+SET(LIBEV_LIBDIR "" CACHE PATH "Path containing libev")
 
-if(LIBEV_INCLUDE_DIRS AND LIBEV_LIBRARIES)
-  set(LIBEV_FIND_QUIETLY TRUE)
-else()
-  find_path(
-    LIBEV_INCLUDE_DIR
-    NAMES ev.h
-    HINTS ${LIBEV_ROOT_DIR}
-    PATH_SUFFIXES include)
+IF(LIBEV_PATH)
+  SET(LIBEV_INCLUDE_PATH "${LIBEV_PATH}/include" CACHE PATH "Include path for ev.h" FORCE)
+  SET(LIBEV_LIBDIR "${LIBEV_PATH}/lib" CACHE PATH "Path containing libev" FORCE)
+ENDIF(LIBEV_PATH)
 
-  find_library(
-    LIBEV_LIBRARY
-    NAME ev
-    HINTS ${LIBEV_ROOT_DIR}
-    PATH_SUFFIXES ${CMAKE_INSTALL_LIBDIR})
+SET(LIBEV_INCLUDE_PATH "/usr/include/libev/")
+IF(LIBEV_INCLUDE_PATH)
+  INCLUDE_DIRECTORIES(${LIBEV_INCLUDE_PATH})
+ENDIF(LIBEV_INCLUDE_PATH)
 
-  set(LIBEV_INCLUDE_DIRS ${LIBEV_INCLUDE_DIR})
-  set(LIBEV_LIBRARIES ${LIBEV_LIBRARY})
+# Use cached result
+IF(NOT LIBEV_FOUND)
+  UNSET(HAVE_EV_H)
+  UNSET(HAVE_LIBEV)
+  UNSET(HAVE_EV_H CACHE)
+  UNSET(HAVE_LIBEV CACHE)
+  UNSET(LIBEV_CFLAGS)
+  UNSET(LIBEV_LDFLAGS)
 
-  include(FindPackageHandleStandardArgs)
-  find_package_handle_standard_args(
-    libev DEFAULT_MSG LIBEV_LIBRARY LIBEV_INCLUDE_DIR)
+  IF(LIBEV_INCLUDE_PATH OR LIBEV_LIBDIR)
+    SET(CMAKE_REQUIRED_INCLUDES ${LIBEV_INCLUDE_PATH})
+    #     MESSAGE(STATUS "Looking for ev.h in ${CMAKE_REQUIRED_INCLUDES}")
+    CHECK_INCLUDE_FILES(ev.h HAVE_EV_H)
+    IF(HAVE_EV_H)
+      #       MESSAGE(STATUS "Looking for lib ev in ${LIBEV_LIBDIR}")
+      CHECK_LIBRARY_EXISTS(ev ev_time "${LIBEV_LIBDIR}" HAVE_LIBEV)
+      IF(HAVE_LIBEV)
+        SET(LIBEV_LIBRARIES ev CACHE INTERNAL "")
+        SET(LIBEV_CFLAGS "" CACHE INTERNAL "")
+        SET(LIBEV_LDFLAGS "-L${LIBEV_LIBDIR} -lev" CACHE INTERNAL "")
+        SET(LIBEV_FOUND TRUE CACHE INTERNAL "Found libev" FORCE)
+      ELSE(HAVE_LIBEV)
+        MESSAGE(STATUS "Couldn't find lib ev in ${LIBEV_LIBDIR}")
+      ENDIF(HAVE_LIBEV)
+    ELSE(HAVE_EV_H)
+      MESSAGE(STATUS "Couldn't find <ev.h> in ${LIBEV_INCLUDE_PATH}")
+    ENDIF(HAVE_EV_H)
+  ELSE(LIBEV_INCLUDE_PATH OR LIBEV_LIBDIR)
+    pkg_check_modules(LIBEV libev)
+    IF(NOT LIBEV_FOUND)
+      #       MESSAGE(STATUS "Looking for ev.h in ${CMAKE_REQUIRED_INCLUDES}")
+      CHECK_INCLUDE_FILES(ev.h HAVE_EV_H)
+      IF(HAVE_EV_H)
+        #         MESSAGE(STATUS "Looking for lib ev")
+        CHECK_LIBRARY_EXISTS(ev ev_time "" HAVE_LIBEV)
+        IF(HAVE_LIBEV)
+          SET(LIBEV_CFLAGS "" CACHE INTERNAL "")
+          SET(LIBEV_LDFLAGS "-lev" CACHE INTERNAL "")
+          SET(LIBEV_FOUND TRUE CACHE INTERNAL "Found libev" FORCE)
+        ELSE(HAVE_LIBEV)
+          MESSAGE(STATUS "Couldn't find lib ev")
+        ENDIF(HAVE_LIBEV)
+      ELSE(HAVE_EV_H)
+        MESSAGE(STATUS "Couldn't find <ev.h>")
+      ENDIF(HAVE_EV_H)
+    ENDIF(NOT LIBEV_FOUND)
+  ENDIF(LIBEV_INCLUDE_PATH OR LIBEV_LIBDIR)
 
-  mark_as_advanced(LIBEV_LIBRARY LIBEV_INCLUDE_DIR)
-endif()
+ENDIF(NOT LIBEV_FOUND)
+
+IF(NOT LIBEV_FOUND)
+  IF(LibEV_FIND_REQUIRED)
+    MESSAGE(FATAL_ERROR "Could not find libev")
+  ENDIF(LibEV_FIND_REQUIRED)
+ENDIF(NOT LIBEV_FOUND)
+
+MARK_AS_ADVANCED(LIBEV_PATH LIBEV_INCLUDE_PATH LIBEV_LIBDIR)
